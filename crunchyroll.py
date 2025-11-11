@@ -90,8 +90,8 @@ def download_segment(segment_links, name, format, max_threads=20):
         for retry in range(max_retries):
             try:
                 cmd = [
-                   "curl", "-s", "--fail", "--connect-timeout", "10",
-                   url.strip(), "-o", temp_path
+                    "curl", "-s", "--fail", "--connect-timeout", "10",
+                    url.strip(), "-o", temp_path
                 ]
                 if use_proxy:
                     cmd.insert(-2, "--proxy")
@@ -110,7 +110,7 @@ def download_segment(segment_links, name, format, max_threads=20):
             time.sleep(retry_delay)
             print(f"[WARN] Segment {index} failed retrying ({retry + 1}/{max_retries}).")
         return index, None
-         
+        
     with ThreadPoolExecutor(max_workers=max_threads) as executor:
         future_to_index = {
             executor.submit(download_single, i, url): i
@@ -134,8 +134,8 @@ def download_segment(segment_links, name, format, max_threads=20):
             temp_path = os.path.join(base_temp_dir, f"segment_{index}.ts")
             try:
                 cmd = [
-                   "curl", "-s", "--fail", "--connect-timeout", "10",
-                   url.strip(), "-o", temp_path
+                    "curl", "-s", "--fail", "--connect-timeout", "10",
+                    url.strip(), "-o", temp_path
                 ]
                 if use_proxy:
                     cmd.insert(-2, "--proxy")
@@ -146,22 +146,22 @@ def download_segment(segment_links, name, format, max_threads=20):
                     stderr=subprocess.DEVNULL
                 )
                 if result.returncode == 0:
-                   with open(temp_path, 'rb') as f:
-                      content = f.read()
-                      buffers[index] = content
-                      failed_segments.remove((index, url)) 
+                    with open(temp_path, 'rb') as f:
+                        content = f.read()
+                        buffers[index] = content
+                        failed_segments.remove((index, url)) 
             except Exception:
                 pass
             time.sleep(retry_delay)
 
-   
+    
     if failed_segments:
         with open("error.txt", "w", encoding="utf-8") as error_file:
             for index, url in failed_segments:
                 error_file.write(f"{index}: {url.strip()}\n")
                 print(f"[WARN] Segment {index} failed permanently after retries.")
 
-   
+    
     os.makedirs("Downloads", exist_ok=True)
     output_path = os.path.join("Downloads", output_filename)
     with open(output_path, 'wb') as out_file:
@@ -332,7 +332,7 @@ def get_segment_link_list(mpd_content, representation_id, url):
             
             representation = tree.find(f'.//dash:Representation[@id="{representation_id}"]', ns)
             if representation is None:
-              return {}
+                return {}
     
             
             adaptation_set = representation.find('..')
@@ -340,11 +340,11 @@ def get_segment_link_list(mpd_content, representation_id, url):
             
             segment_template = adaptation_set.find('dash:SegmentTemplate', ns)
             if segment_template is None:
-              return {}
+                return {}
     
             segment_timeline = segment_template.find('dash:SegmentTimeline', ns)
             if segment_timeline is None:
-              return {}
+                return {}
     
             media_template = segment_template.get('media')
             init_template = segment_template.get('initialization')
@@ -537,14 +537,18 @@ class Crunchyroll(CrunchyrollBase):
         if use_proxy:
             return self.session.get(f"https://www.crunchyroll.com/content/v2/cms/objects/{content_id}?ratings=true&locale=en-US", proxy=proxy).json()
         else:
-            return self.session.get(f"https://www.crunchyroll.com/content/v2/cms/objects/{content_id}?ratings=true&locale=en-US").json()
+            return self.session.get(f"https.://www.crunchyroll.com/content/v2/cms/objects/{content_id}?ratings=true&locale=en-US").json()
     
 
     def get_pssh(self, info):
+        # Fix: The MPD URL is nested within the 'streams' object
+        mpd_url = info['streams']['adaptive_dash']['raw']['url']
+        
         if use_proxy:
-            mpd_content = self.session.get(info["url"], proxy=proxy).text
+            mpd_content = self.session.get(mpd_url, proxy=proxy).text
         else:
-            mpd_content = self.session.get(info["url"]).text
+            mpd_content = self.session.get(mpd_url).text
+            
         mpd_license = parse_mpd_logic(mpd_content)
         pssh = mpd_license["pssh"][1]
         token = info["token"]
@@ -559,4 +563,3 @@ def find_guid_by_locale(data, locale):
         if version["audio_locale"] == "en-US":
             en_us_guid = version["guid"]
     return en_us_guid
-
